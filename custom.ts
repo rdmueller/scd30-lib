@@ -101,10 +101,13 @@ namespace scd30 {
             isInitialized = true
         }
         if (isDebugMode==debugMode.Fake) {
-            co2wert+=(input.runningTime()/500)%4000
+            let time = input.runningTime()/500
+            co2wert+=(time)%4000
+            serial.writeString("t: "+time+" co2: "+co2wert)
             if (co2wert>=2000) {
                 co2wert = 4000-co2wert
             }
+            serial.writeLine(" co2': "+co2wert)
             return co2wert
         } else {
          pins.i2cWriteNumber(
