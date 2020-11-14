@@ -4,11 +4,14 @@
  * Weitere Informationen unter https://makecode.calliope.cc/blocks/custom
  */
 
-enum MyEnum {
-    //% block="one"
-    One,
-    //% block="two"
-    Two
+enum debugMode {
+    Off,
+    //% block="Info"
+    Info,
+    //% block="Debug"
+    Debug,
+    //% block="Simulation"
+    Fake,
 }
 
 /**
@@ -22,6 +25,101 @@ namespace scd30 {
     let GetDataReadyStatusCMD = 514
     let RecalibrationValueCMD = 20996 
     let SCD30ADR = 0x61
+    let isInitialized = false
+    let isDebugMode = debugMode.Off
+    let co2wert = 0
+    /**
+     * setzt die Library in den Debug-Modus
+     * @param modus
+     */
+    //% block
+    export function debug_modus(mode: debugMode){
+        isDebugMode = mode
+        if (mode==debugMode.Fake) {
+            isInitialized = true
+        }
+        if (isDebugMode==debugMode.Info || isDebugMode==debugMode.Debug) {
+        serial.redirectToUSB()
+        serial.setBaudRate(BaudRate.BaudRate9600)
+        }
+    }
+    /**
+     * Wartet bis der Sensor einsatzbereit ist
+     */
+    //% block
+    export function wait_ready(): void {
+        if (isDebugMode==debugMode.Fake) {
+            // skip
+        } else {
+            if (isDebugMode==debugMode.Info || isDebugMode==debugMode.Debug) {
+                serial.writeLine("wait_ready()")
+            }
+        let istBereit = 0
+        while (istBereit == 0) {
+            // checken, ob Werte anliegen
+            pins.i2cWriteNumber(
+            SCD30ADR,
+            GetDataReadyStatusCMD,
+            NumberFormat.UInt16BE,
+            false
+            )
+            // 3ms warten
+            control.waitMicros(3000)
+            istBereit = pins.i2cReadNumber(SCD30ADR, NumberFormat.UInt16BE, false)
+            serial.writeLine("> "+istBereit)
+            control.waitMicros(3000)
+        }
+        }
+    }
+    /**
+     * startet die Messung
+     */
+    //% block
+    export function startMeasurement () {
+        if (isDebugMode==debugMode.Fake) {
+            // skip
+        } else {
+            if (isDebugMode==debugMode.Info || isDebugMode==debugMode.Debug) {
+                serial.writeLine("starMeasurement()")
+            }
+            pins.i2cWriteNumber(
+                SCD30ADR,
+                StartPeriodicMeasurementCMD,
+                NumberFormat.UInt16BE,
+                false
+            )
+        }
+    }
+    /**
+     * lese den aktuellen CO2 Wert des Sensors
+     */ 
+    //% block
+    export function lese_CO2_Wert (): number {
+        if (!isInitialized) {
+            wait_ready()
+            startMeasurement()
+            isInitialized = true
+        }
+        if (isDebugMode==debugMode.Fake) {
+            co2wert+=(input.runningTime()*5)%4000
+            if (co2wert>=2000) {
+                co2wert = 4000-co2wert
+            }
+            return co2wert
+        } else {
+         pins.i2cWriteNumber(
+            SCD30ADR,
+            ReadMeasurementCMD,
+            NumberFormat.UInt16BE,
+            false
+        )
+        // 3ms warten
+        control.waitMicros(3000)
+        co2wert = pins.i2cReadNumber(SCD30ADR, NumberFormat.Float32BE, true)
+        return co2wert
+        }
+    }
+
     /**
      * TODO: Beschreibe deine Funktion hier
      * @param n Beschreibe die Parameter hier, eg: 5
@@ -92,48 +190,5 @@ namespace scd30 {
     }
 **/
 
-    /**
-     * TODO: Wartet bis der Sensor einsatzbereit ist
-     */
-    //% block
-    export function wait_ready(): void {
-        let istBereit = 0
-        while (istBereit == 0) {
-            // checken, ob Werte anliegen
-            pins.i2cWriteNumber(
-            SCD30ADR,
-            GetDataReadyStatusCMD,
-            NumberFormat.UInt16BE,
-            false
-            )
-            // 4ms warten
-            control.waitMicros(3000)
-            istBereit = pins.i2cReadNumber(SCD30ADR, NumberFormat.UInt16BE, false)
-            control.waitMicros(3000)
-        }
-    }
-    //% block
-    export function startMeasurement () {
-        pins.i2cWriteNumber(
-            SCD30ADR,
-            StartPeriodicMeasurementCMD,
-            NumberFormat.UInt16BE,
-            false
-        )
-    }
-    //% block
-    export function leseWert (): number {
-        // checken, ob Werte anliegen
-        pins.i2cWriteNumber(
-            SCD30ADR,
-            ReadMeasurementCMD,
-            NumberFormat.UInt16BE,
-            false
-        )
-        // 3ms warten
-        control.waitMicros(3000)
-        let co2wert = pins.i2cReadNumber(SCD30ADR, NumberFormat.Float32BE, true)
-        return co2wert
-    }
 
 }
