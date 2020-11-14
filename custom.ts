@@ -101,7 +101,7 @@ namespace scd30 {
             isInitialized = true
         }
         if (isDebugMode==debugMode.Fake) {
-            co2wert+=(input.runningTime()*5)%4000
+            co2wert+=(input.runningTime()*15)%4000
             if (co2wert>=2000) {
                 co2wert = 4000-co2wert
             }
