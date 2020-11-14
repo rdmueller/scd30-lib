@@ -101,7 +101,7 @@ namespace scd30 {
             isInitialized = true
         }
         if (isDebugMode==debugMode.Fake) {
-            let time = input.runningTime()/50
+            let time = input.runningTime()/20
             co2wert=(time)%4000
             serial.writeString("t: "+time+" co2: "+co2wert)
             if (co2wert>=2000) {
